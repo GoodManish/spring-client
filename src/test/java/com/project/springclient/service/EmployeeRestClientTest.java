@@ -46,6 +46,13 @@ class EmployeeRestClientTest {
     }
 
     @Test
+    void employee_With_Retry_Mechanism(){
+        String employeeId = "999";
+        org.junit.jupiter.api.Assertions.assertThrows(Exception.class,
+                () -> employeeRestClient.getAEmployeeWithRetryMechanism(employeeId));
+    }
+
+    @Test
     void employee_with_custom_error_handling(){
         String employeeId = "999";
         org.junit.jupiter.api.Assertions.assertThrows(ClientDataException.class,

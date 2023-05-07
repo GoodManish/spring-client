@@ -16,7 +16,9 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.util.List;
 
 import static com.project.springclient.constant.EmployeeConstant.*;
@@ -25,6 +27,12 @@ import static com.project.springclient.constant.EmployeeConstant.*;
 @Slf4j
 public class EmployeeRestClient {
     private final WebClient webClient;
+    public static final Retry fixedRetry = Retry
+            .backoff(3, Duration.ofSeconds(2))
+//            .filter(e-> e instanceof WebClientResponseException)
+            .doAfterRetry((ex) -> {
+                log.error("Exception is: {}", ex);
+            });
 
     public EmployeeRestClient(WebClient webClient) {
         this.webClient = webClient;
@@ -55,6 +63,26 @@ public class EmployeeRestClient {
             log.error("Error :{}",e.getMessage());
             throw e;
         }
+    }
+
+    Employee getAEmployeeWithRetryMechanism(String employeeId) {
+        try {
+            return webClient.get().uri(EMPLOYEE_BY_ID_V1, employeeId)
+                    .retrieve()
+                    .bodyToMono(Employee.class)
+//                .retry(3)
+//                .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(2)))
+                    .retryWhen(Retry.backoff(3, Duration.ofSeconds(2)))
+//                .retryWhen(fixedRetry)
+                    .block();
+        } catch (WebClientResponseException e) {
+            log.error("Error responseCode : {}, and Response Body: {}", e.getRawStatusCode(), e.getResponseBodyAsString());
+            throw e;
+        } catch (Exception e) {
+            log.error("Error :{}", e.getMessage());
+            throw e;
+        }
+
     }
 
     Employee getAEmployee_with_custom_error_handling(String employeeId){
